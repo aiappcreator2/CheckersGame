@@ -1,0 +1,129 @@
+const boardSize = 8;
+const board = [];
+let selectedPiece = null;
+let currentPlayer = 'player';
+let difficulty = 'easy';
+
+const gameBoard = document.getElementById('game-board');
+const difficultySelect = document.getElementById('difficulty');
+const resetButton = document.getElementById('reset');
+
+function createBoard() {
+    for (let row = 0; row < boardSize; row++) {
+        const rowArray = [];
+        for (let col = 0; col < boardSize; col++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            if ((row + col) % 2 === 1) {
+                cell.classList.add('black');
+                if (row < 3) {
+                    cell.innerHTML = '<div class="piece computer"></div>';
+                    rowArray.push('computer');
+                } else if (row > 4) {
+                    cell.innerHTML = '<div class="piece player"></div>';
+                    rowArray.push('player');
+                } else {
+                    rowArray.push(null);
+                }
+            } else {
+                rowArray.push(null);
+            }
+            cell.addEventListener('click', () => onCellClick(row, col));
+            gameBoard.appendChild(cell);
+        }
+        board.push(rowArray);
+    }
+}
+
+function onCellClick(row, col) {
+    if (currentPlayer === 'computer') return;
+
+    const cell = board[row][col];
+    if (cell === 'player' && !selectedPiece) {
+        selectedPiece = { row, col };
+        highlightMoves(row, col);
+    } else if (selectedPiece) {
+        movePiece(selectedPiece.row, selectedPiece.col, row, col);
+        selectedPiece = null;
+        clearHighlights();
+        if (currentPlayer === 'player') {
+            currentPlayer = 'computer';
+            setTimeout(computerMove, 500);
+        }
+    }
+}
+
+function highlightMoves(row, col) {
+    // Basic move highlighting (can be expanded)
+    const moves = [
+        { row: row + 1, col: col - 1 },
+        { row: row + 1, col: col + 1 }
+    ];
+    moves.forEach(move => {
+        if (isValidMove(move.row, move.col)) {
+            const cell = gameBoard.children[move.row * boardSize + move.col];
+            cell.style.backgroundColor = 'yellow';
+        }
+    });
+}
+
+function clearHighlights() {
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(cell => cell.style.backgroundColor = '');
+}
+
+function isValidMove(row, col) {
+    return row >= 0 && row < boardSize && col >= 0 && col < boardSize && board[row][col] === null;
+}
+
+function movePiece(fromRow, fromCol, toRow, toCol) {
+    if (!isValidMove(toRow, toCol)) return;
+
+    board[toRow][toCol] = board[fromRow][fromCol];
+    board[fromRow][fromCol] = null;
+
+    const fromCell = gameBoard.children[fromRow * boardSize + fromCol];
+    const toCell = gameBoard.children[toRow * boardSize + toCol];
+
+    toCell.innerHTML = fromCell.innerHTML;
+    fromCell.innerHTML = '';
+}
+
+function computerMove() {
+    let moves = [];
+    for (let row = 0; row < boardSize; row++) {
+        for (let col = 0; col < boardSize; col++) {
+            if (board[row][col] === 'computer') {
+                const possibleMoves = [
+                    { row: row - 1, col: col - 1 },
+                    { row: row - 1, col: col + 1 }
+                ];
+                possibleMoves.forEach(move => {
+                    if (isValidMove(move.row, move.col)) {
+                        moves.push({ from: { row, col }, to: move });
+                    }
+                });
+            }
+        }
+    }
+
+    if (moves.length > 0) {
+        const move = moves[Math.floor(Math.random() * moves.length)];
+        movePiece(move.from.row, move.from.col, move.to.row, move.to.col);
+    }
+
+    currentPlayer = 'player';
+}
+
+difficultySelect.addEventListener('change', (e) => {
+    difficulty = e.target.value;
+});
+
+resetButton.addEventListener('click', () => {
+    gameBoard.innerHTML = '';
+    board.length = 0;
+    createBoard();
+    currentPlayer = 'player';
+});
+
+createBoard();
